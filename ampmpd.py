@@ -25,8 +25,9 @@ class AmpMpd(object):
     def on_cmd(self, cmd):
         status = self.client.status()
         state = status.get('state')
-        print(status)
 
+        if cmd == 'info':
+            self.info.clear()
         if cmd == 'start' or cmd == 'pause':
             if state == 'stop':
                 self.client.play()

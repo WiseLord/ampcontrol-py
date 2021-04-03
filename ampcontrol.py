@@ -1,7 +1,7 @@
 import getopt
+import subprocess
 import sys
 import threading
-import time
 
 import dbus.mainloop.glib
 from gi.repository import GLib
@@ -64,9 +64,22 @@ class AmpControl(object):
             self.cmd_event.wait()
             while self.cmd_queue:
                 cmd = self.cmd_queue.pop(0)
-                if self.mode == "bluez":
+                if cmd == 'info':
+                    self.info.clear()
+                    self.network.clear()
+                if cmd.startswith('mode'):
+                    try:
+                        mode = cmd[6:-2].strip()
+                        self.mode = mode
+                        if mode == 'bluez':
+                            subprocess.call(['/usr/bin/bluetoothctl', 'discoverable', 'on'])
+                        else:
+                            subprocess.call(['/usr/bin/bluetoothctl', 'discoverable', 'off'])
+                    except:
+                        pass
+                elif self.mode == "bluez":
                     self.bluez.on_cmd(cmd)
-                if self.mode == "mpd":
+                elif self.mode == "mpd":
                     self.mpd.on_cmd(cmd)
             self.cmd_event.clear()
 
@@ -96,22 +109,23 @@ class AmpControl(object):
             elif key in 'meta':
                 self.serial.send('##CLI.META#: ' + str(self.info.get('meta')))
             elif key in 'state':
-                if self.info['state'].startswith('play'):
+                state = str(self.info.get('state'))
+                if state.startswith('play'):
                     self.serial.send('##CLI.PLAYING#')
-                elif self.info['state'].startswith('pause'):
+                elif state.startswith('pause'):
                     self.serial.send('##CLI.PAUSED#')
-                elif self.info['state'].startswith('stop'):
+                elif state.startswith('stop'):
                     self.serial.send('##CLI.STOPPED#')
             elif key in 'elapsed':
                 self.serial.send('##CLI.ELAPSED#: ' + str(round(self.info['elapsed'])))
             elif key in 'repeat':
-                self.serial.send('##CLI.REPEAT#: ' + self.info.get('repeat'))
+                self.serial.send('##CLI.REPEAT#: ' + str(self.info.get('repeat')))
             elif key in 'random':
-                self.serial.send('##CLI.RANDOM#: ' + self.info.get('random'))
+                self.serial.send('##CLI.RANDOM#: ' + str(self.info.get('random')))
             elif key in 'single':
-                self.serial.send('##CLI.SINGLE#: ' + self.info.get('single'))
+                self.serial.send('##CLI.SINGLE#: ' + str(self.info.get('single')))
             elif key in 'consume':
-                self.serial.send('##CLI.CONSUME#: ' + self.info.get('consume'))
+                self.serial.send('##CLI.CONSUME#: ' + str(self.info.get('consume')))
 
 
 if __name__ == '__main__':

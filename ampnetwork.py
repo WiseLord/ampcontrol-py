@@ -4,7 +4,7 @@ import socket
 
 class AmpNetwork(object):
     def __init__(self):
-        self.ip = "127.0.0.1"
+        self.ip = ""
         self.alive = False
         self.check_thread = None
         self.notify_cb = None
@@ -21,8 +21,8 @@ class AmpNetwork(object):
     def join(self):
         self.check_thread.join()
 
-    def get_ip(self):
-        return self.ip
+    def clear(self):
+        self.ip = ""
 
     def update_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
