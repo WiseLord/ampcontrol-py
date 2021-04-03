@@ -7,11 +7,11 @@ class AmpSerial(object):
         self.serial = serial.Serial(port=port, baudrate=baudrate)
         self.alive = False
         self.reader_thread = None
-        self.parse_cb = None
+        self.read_cb = None
         self.write_lock = threading.Lock()
 
-    def set_parse_cb(self, cb):
-        self.parse_cb = cb
+    def set_read_cb(self, cb):
+        self.read_cb = cb
 
     def send(self, info):
         self.write_lock.acquire()
@@ -33,8 +33,8 @@ class AmpSerial(object):
             try:
                 str_seq = self.serial.read_until(serial.LF, 256)
                 str_seq = str(str_seq, 'utf-8').strip()
-                if self.parse_cb:
-                    self.parse_cb(str_seq)
+                if self.read_cb:
+                    self.read_cb(str_seq)
                 if str_seq == 'quit':
                     self.alive = False
             except:
