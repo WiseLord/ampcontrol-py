@@ -2,6 +2,7 @@
   <dictionary name="wiselord">
     <words>
       <w>baudrate</w>
+      <w>bluez</w>
     </words>
   </dictionary>
 </component>

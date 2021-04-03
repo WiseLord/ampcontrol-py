@@ -118,14 +118,8 @@ class AmpControl(object):
                     self.serial.send('##CLI.STOPPED#')
             elif key in 'elapsed':
                 self.serial.send('##CLI.ELAPSED#: ' + str(round(self.info['elapsed'])))
-            elif key in 'repeat':
-                self.serial.send('##CLI.REPEAT#: ' + str(self.info.get('repeat')))
-            elif key in 'random':
-                self.serial.send('##CLI.RANDOM#: ' + str(self.info.get('random')))
-            elif key in 'single':
-                self.serial.send('##CLI.SINGLE#: ' + str(self.info.get('single')))
-            elif key in 'consume':
-                self.serial.send('##CLI.CONSUME#: ' + str(self.info.get('consume')))
+            elif key in {'repeat', 'random', 'single', 'consume'}:
+                self.serial.send('##CLI.' + key.upper() + '#: ' + str(self.info.get(key)))
 
 
 if __name__ == '__main__':
