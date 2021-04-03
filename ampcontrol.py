@@ -20,12 +20,10 @@ class AmpControl(object):
         self.get_args(argv)
 
         self.info = {}
-        self.mode = "bluez"
+        self.mode = "mpd"
 
         self.network = AmpNetwork()
         self.network.set_notify_cb(self.on_notify)
-
-        self.mpd = AmpMpd(host=self.host, port=self.port)
 
         self.cmd_queue = []
         self.cmd_event = threading.Event()
@@ -33,15 +31,19 @@ class AmpControl(object):
         self.cmd_thread.daemon = True
 
         self.serial = AmpSerial(port=self.serial, baudrate=self.baud)
-        self.serial.set_read_cb(self.cmd_handler)
+        self.serial.set_read_cb(self.on_cmd)
 
         self.bluez = AmpBluez()
         self.bluez.set_notify_cb(self.on_notify)
+
+        self.mpd = AmpMpd(host=self.host, port=self.port)
+        self.mpd.set_notify_cb(self.on_notify)
 
     def start(self):
         self.cmd_thread.start()
         self.serial.start();
         self.network.start();
+        self.mpd.start();
 
     def on_notify(self, keys):
         for key in keys:
@@ -49,7 +51,7 @@ class AmpControl(object):
                 self.info[key] = keys[key]
         self.notify(keys)
 
-    def cmd_handler(self, cmd):
+    def on_cmd(self, cmd):
         cmd = str(cmd).strip()
         if cmd:
             print("<<<: '" + cmd + "'")
@@ -63,9 +65,9 @@ class AmpControl(object):
             while self.cmd_queue:
                 cmd = self.cmd_queue.pop(0)
                 if self.mode == "bluez":
-                    self.bluez.cmd_handler(cmd)
+                    self.bluez.on_cmd(cmd)
                 if self.mode == "mpd":
-                    self.mpd.cmd_handler(cmd)
+                    self.mpd.on_cmd(cmd)
             self.cmd_event.clear()
 
     def get_args(self, argv):
@@ -86,23 +88,30 @@ class AmpControl(object):
                 self.port = arg
 
     def notify(self, keys):
-        print(keys)
         if 'all' in keys:
             keys = self.info.keys()
         for key in keys:
             if key in 'ip':
-                self.serial.send('ip:' + self.info['ip'])
-            if key in 'meta':
-                self.serial.send('##CLI.META#: ' + self.info['meta'])
-            if key in 'state':
-                if self.info['state'] == 'playing':
+                self.serial.send('ip:' + str(self.info.get('ip')))
+            elif key in 'meta':
+                self.serial.send('##CLI.META#: ' + str(self.info.get('meta')))
+            elif key in 'state':
+                if self.info['state'].startswith('play'):
                     self.serial.send('##CLI.PLAYING#')
-                elif self.info['state'] == 'paused':
+                elif self.info['state'].startswith('pause'):
                     self.serial.send('##CLI.PAUSED#')
-                elif self.info['state'] == 'stopped':
+                elif self.info['state'].startswith('stop'):
                     self.serial.send('##CLI.STOPPED#')
-            if key in 'elapsed':
+            elif key in 'elapsed':
                 self.serial.send('##CLI.ELAPSED#: ' + str(round(self.info['elapsed'])))
+            elif key in 'repeat':
+                self.serial.send('##CLI.REPEAT#: ' + self.info.get('repeat'))
+            elif key in 'random':
+                self.serial.send('##CLI.RANDOM#: ' + self.info.get('random'))
+            elif key in 'single':
+                self.serial.send('##CLI.SINGLE#: ' + self.info.get('single'))
+            elif key in 'consume':
+                self.serial.send('##CLI.CONSUME#: ' + self.info.get('consume'))
 
 
 if __name__ == '__main__':
