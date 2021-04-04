@@ -1,0 +1,15 @@
+[Unit]
+Description=MPD/BT management from ampcontrol
+After=mpd.service bluealsa-aplay.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 -u /home/pi/ampcontrol/ampcontrol.py
+WorkingDirectory=/home/pi/ampcontrol/
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target

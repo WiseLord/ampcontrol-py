@@ -1,4 +1,5 @@
 import getopt
+import signal
 import subprocess
 import sys
 import threading
@@ -39,11 +40,19 @@ class AmpControl(object):
         self.mpd = AmpMpd(host=self.host, port=self.port)
         self.mpd.set_notify_cb(self.on_notify)
 
+        self.notify_lock = threading.Lock()
+
+    def signal_handler(self, sig, frame):
+        self.serial.send('##SYS.RESET')
+        exit(0)
+
     def start(self):
         self.cmd_thread.start()
         self.serial.start();
         self.network.start();
         self.mpd.start();
+        signal.signal(signal.SIGTERM, self.signal_handler)
+        signal.signal(signal.SIGINT, self.signal_handler)
 
     def on_notify(self, keys):
         for key in keys:
@@ -67,7 +76,7 @@ class AmpControl(object):
                 if cmd == 'info':
                     self.info.clear()
                     self.network.clear()
-                if cmd.startswith('mode'):
+                elif cmd.startswith('mode'):
                     try:
                         mode = cmd[6:-2].strip()
                         self.mode = mode
@@ -75,6 +84,11 @@ class AmpControl(object):
                             subprocess.call(['/usr/bin/bluetoothctl', 'discoverable', 'on'])
                         else:
                             subprocess.call(['/usr/bin/bluetoothctl', 'discoverable', 'off'])
+                    except:
+                        pass
+                elif cmd == 'poweroff':
+                    try:
+                        subprocess.call(['sh', '/home/pi/poweroff.sh'])
                     except:
                         pass
                 elif self.mode == "bluez":
@@ -101,6 +115,8 @@ class AmpControl(object):
                 self.port = arg
 
     def notify(self, keys):
+        self.notify_lock.acquire()
+
         if 'all' in keys:
             keys = self.info.keys()
         for key in keys:
@@ -110,16 +126,14 @@ class AmpControl(object):
                 self.serial.send('##CLI.META#: ' + str(self.info.get('meta')))
             elif key in 'state':
                 state = str(self.info.get('state'))
-                if state.startswith('play'):
-                    self.serial.send('##CLI.PLAYING#')
-                elif state.startswith('pause'):
-                    self.serial.send('##CLI.PAUSED#')
-                elif state.startswith('stop'):
-                    self.serial.send('##CLI.STOPPED#')
-            elif key in 'elapsed':
-                self.serial.send('##CLI.ELAPSED#: ' + str(round(self.info['elapsed'])))
+                if state in {'playing', 'paused', 'stopped'}:
+                    self.serial.send('##CLI.' + state.upper() + '#')
+            elif key in {'elapsed', 'duration'}:
+                self.serial.send('##CLI.' + key.upper() + '#: ' + str(round(self.info[key])))
             elif key in {'repeat', 'random', 'single', 'consume'}:
                 self.serial.send('##CLI.' + key.upper() + '#: ' + str(self.info.get(key)))
+
+        self.notify_lock.release()
 
 
 if __name__ == '__main__':
