@@ -35,10 +35,10 @@ class AmpControl(object):
         self.serial.set_read_cb(self.on_cmd)
 
         self.bluez = AmpBluez()
-        self.bluez.set_notify_cb(self.on_notify)
+        self.bluez.set_notify_cb(self.on_notify_bluez)
 
         self.mpd = AmpMpd(host=self.host, port=self.port)
-        self.mpd.set_notify_cb(self.on_notify)
+        self.mpd.set_notify_cb(self.on_notify_mpd)
 
         self.notify_lock = threading.Lock()
 
@@ -48,11 +48,22 @@ class AmpControl(object):
 
     def start(self):
         self.cmd_thread.start()
+
         self.serial.start();
         self.network.start();
         self.mpd.start();
+        self.bluez.start();
+
         signal.signal(signal.SIGTERM, self.signal_handler)
         signal.signal(signal.SIGINT, self.signal_handler)
+
+    def on_notify_bluez(self, keys):
+        if self.mode == 'bluez':
+            self.on_notify(keys)
+
+    def on_notify_mpd(self, keys):
+        if self.mode == 'mpd':
+            self.on_notify(keys)
 
     def on_notify(self, keys):
         for key in keys:
@@ -71,15 +82,19 @@ class AmpControl(object):
     def cmd_fn(self):
         while True:
             self.cmd_event.wait()
+
             while self.cmd_queue:
                 cmd = self.cmd_queue.pop(0)
                 if cmd == 'info':
                     self.info.clear()
                     self.network.clear()
-                elif cmd.startswith('mode'):
+                if cmd.startswith('mode'):
                     try:
                         mode = cmd[6:-2].strip()
-                        self.mode = mode
+                        if self.mode != mode:
+                            self.mode = mode
+                            print("MODE: " + mode)
+                            self.cmd_queue.append("info")
                         if mode == 'bluez':
                             subprocess.call(['/usr/bin/bluetoothctl', 'discoverable', 'on'])
                         else:
@@ -95,6 +110,7 @@ class AmpControl(object):
                     self.bluez.on_cmd(cmd)
                 elif self.mode == "mpd":
                     self.mpd.on_cmd(cmd)
+
             self.cmd_event.clear()
 
     def get_args(self, argv):
@@ -113,6 +129,7 @@ class AmpControl(object):
                 self.host = arg
             if opt in ("-p", "--port"):
                 self.port = arg
+
 
     def notify(self, keys):
         self.notify_lock.acquire()
