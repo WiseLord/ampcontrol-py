@@ -15,7 +15,7 @@ class AmpSerial(object):
 
     def send(self, info):
         self.write_lock.acquire()
-        print(">>>: " + info)
+        print('>>>: ' + info)
         self.serial.write(bytes(info + '\r\n', 'utf-8'))
         self.write_lock.release()
 

@@ -23,53 +23,63 @@ class AmpMpd(object):
         self.check_thread.daemon = True
         self.check_thread.start()
 
+    def reset_duration(self):
+        self.notify_cb({'duration': 0})
+
     def on_cmd(self, cmd):
         self.mpd_lock.acquire()
 
         state = self.info.get('state')
 
-        if cmd == 'info':
-            self.info.clear()
-        elif cmd == 'start' or cmd == 'pause':
-            if state == 'stop':
-                self.client.play()
-            else:
-                self.client.pause()
-        elif cmd == 'stop':
-            self.client.stop()
-        elif cmd == 'rewind':
-            if state == 'play':
-                elapsed = float(self.info.get('elapsed'))
-                pos = elapsed - 5
-                if pos < 0:
-                    pos = 0
-                self.client.seekcur(pos)
-        elif cmd == 'ffwd':
-            if state == 'play':
-                elapsed = float(self.info.get('elapsed'))
-                pos = elapsed + 5
-                self.client.seekcur(pos)
-        elif cmd == 'next':
-            if state == 'play':
-                self.client.next()
-        elif cmd == 'previous':
-            if state == 'play':
-                self.client.previous()
-        elif cmd == 'repeat':
-            self.client.repeat(int(not int(self.info.get('repeat'))))
-        elif cmd == 'random':
-            self.client.random(int(not int(self.info.get('random'))))
-        elif cmd == 'single':
-            self.client.single(int(not int(self.info.get('single'))))
-        elif cmd == 'consume':
-            self.client.consume(int(not int(self.info.get('consume'))))
-        elif cmd.startswith('load'):
-            playlists = self.client.listplaylists()
-            pl_name = cmd[6:-2].strip()
-            if next((pl for pl in playlists if pl['playlist'] == pl_name), False):
-                self.client.clear()
-                self.client.load(pl_name)
-                self.client.play()
+        try:
+            if cmd == 'info':
+                self.info.clear()
+            elif cmd == 'start' or cmd == 'pause':
+                if state == 'stop':
+                    self.client.play()
+                else:
+                    self.client.pause()
+            elif cmd == 'stop':
+                self.reset_duration()
+                self.client.stop()
+            elif cmd == 'rewind':
+                if state == 'play':
+                    elapsed = float(self.info.get('elapsed'))
+                    pos = elapsed - 5
+                    if pos < 0:
+                        pos = 0
+                    self.client.seekcur(pos)
+            elif cmd == 'ffwd':
+                if state == 'play':
+                    elapsed = float(self.info.get('elapsed'))
+                    pos = elapsed + 5
+                    self.client.seekcur(pos)
+            elif cmd == 'next':
+                if state == 'play':
+                    self.reset_duration()
+                    self.client.next()
+            elif cmd == 'previous':
+                if state == 'play':
+                    self.reset_duration()
+                    self.client.previous()
+            elif cmd == 'repeat':
+                self.client.repeat(int(not int(self.info.get('repeat'))))
+            elif cmd == 'random':
+                self.client.random(int(not int(self.info.get('random'))))
+            elif cmd == 'single':
+                self.client.single(int(not int(self.info.get('single'))))
+            elif cmd == 'consume':
+                self.client.consume(int(not int(self.info.get('consume'))))
+            elif cmd.startswith('load'):
+                playlists = self.client.listplaylists()
+                pl_name = cmd[6:-2].strip()
+                if next((pl for pl in playlists if pl['playlist'] == pl_name), False):
+                    self.reset_duration()
+                    self.client.clear()
+                    self.client.load(pl_name)
+                    self.client.play()
+        except:
+            pass
 
         self.mpd_lock.release()
 
@@ -91,8 +101,8 @@ class AmpMpd(object):
 
         if update_meta:
             cb_data['meta'] = self.info.get('name')
-            if self.info['title']:
-                if self.info['artist']:
+            if self.info.get('title'):
+                if self.info.get('artist'):
                     cb_data['meta'] = self.info.get('artist') + ' - ' + self.info.get('title')
                 else:
                     cb_data['meta'] = self.info.get('title')

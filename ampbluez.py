@@ -91,12 +91,12 @@ class AmpBluez(object):
         if self.player_props:
             track = self.player_props.Get('org.bluez.MediaPlayer1', 'Track')
             cb_data['meta'] = self.get_meta(track)
-            print(track)
+            # print(track)
         else:
             print("No bluetooth player!")
 
         if cb_data and self.notify_cb:
-            print('call bt notify_cb' + str(cb_data))
+            # print('call bt notify_cb' + str(cb_data))
             self.notify_cb(cb_data)
 
     def on_cmd(self, cmd):

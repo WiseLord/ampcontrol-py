@@ -57,6 +57,8 @@ class AmpControl(object):
         signal.signal(signal.SIGTERM, self.signal_handler)
         signal.signal(signal.SIGINT, self.signal_handler)
 
+        self.on_info()
+
     def on_notify_bluez(self, keys):
         if self.mode == 'bluez':
             self.on_notify(keys)
@@ -79,6 +81,12 @@ class AmpControl(object):
                 self.cmd_queue.append(cmd[len('cli.'):])
                 self.cmd_event.set()
 
+    def on_info(self):
+        self.info.clear()
+        self.network.clear()
+        cb_data = {'mode': str(self.mode).upper()}
+        self.on_notify(cb_data)
+
     def cmd_fn(self):
         while True:
             self.cmd_event.wait()
@@ -86,15 +94,14 @@ class AmpControl(object):
             while self.cmd_queue:
                 cmd = self.cmd_queue.pop(0)
                 if cmd == 'info':
-                    self.info.clear()
-                    self.network.clear()
+                    self.on_info()
+
                 if cmd.startswith('mode'):
                     try:
                         mode = cmd[6:-2].strip()
                         if self.mode != mode:
                             self.mode = mode
-                            print("MODE: " + mode)
-                            self.cmd_queue.append("info")
+                            self.cmd_queue.append('info')
                         if mode == 'bluez':
                             subprocess.call(['/usr/bin/bluetoothctl', 'discoverable', 'on'])
                         else:
@@ -106,28 +113,28 @@ class AmpControl(object):
                         subprocess.call(['sh', '/home/pi/poweroff.sh'])
                     except:
                         pass
-                elif self.mode == "bluez":
+                elif self.mode == 'bluez':
                     self.bluez.on_cmd(cmd)
-                elif self.mode == "mpd":
+                elif self.mode == 'mpd':
                     self.mpd.on_cmd(cmd)
 
             self.cmd_event.clear()
 
     def get_args(self, argv):
         try:
-            opts, args = getopt.getopt(argv, "s:b:h:p:", ["serial=", "baud=", "host=", "port="])
+            opts, args = getopt.getopt(argv, 's:b:h:p:', ['serial=', 'baud=', 'host=', 'port='])
         except getopt.GetoptError:
-            print("Wrong command line arguments")
+            print('Wrong command line arguments')
             sys.exit(2)
 
         for opt, arg in opts:
-            if opt in ("-s", "--serial"):
+            if opt in ('-s', '--serial'):
                 self.serial = arg
-            if opt in ("-b", "--baud"):
+            if opt in ('-b', '--baud'):
                 self.baud = arg
-            if opt in ("-h", "--host"):
+            if opt in ('-h', '--host'):
                 self.host = arg
-            if opt in ("-p", "--port"):
+            if opt in ('-p', '--port'):
                 self.port = arg
 
 
@@ -139,6 +146,8 @@ class AmpControl(object):
         for key in keys:
             if key in 'ip':
                 self.serial.send('ip:' + str(self.info.get('ip')))
+            elif key in 'mode':
+                self.serial.send('##SYS.MODE#: ' + str(self.info.get('mode')))
             elif key in 'meta':
                 self.serial.send('##CLI.META#: ' + str(self.info.get('meta')))
             elif key in 'state':

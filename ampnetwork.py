@@ -4,7 +4,7 @@ import socket
 
 class AmpNetwork(object):
     def __init__(self):
-        self.ip = ""
+        self.ip = ''
         self.alive = False
         self.check_thread = None
         self.notify_cb = None
@@ -22,7 +22,7 @@ class AmpNetwork(object):
         self.check_thread.join()
 
     def clear(self):
-        self.ip = ""
+        self.ip = ''
 
     def update_ip(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
