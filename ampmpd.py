@@ -93,19 +93,28 @@ class AmpMpd(object):
         self.mpd_lock.release()
 
         update_meta = False
-        for key in {'artist', 'title', 'name'}:
+        for key in {'title', 'name', 'artist', 'album', 'date'}:
             value = song.get(key)
             if self.info.get(key) != value:
                 self.info[key] = value
                 update_meta = True
 
         if update_meta:
-            cb_data['meta'] = self.info.get('name')
+            cb_data['meta'] = ''
+            if self.info.get('artist'):
+                cb_data['meta'] += self.info.get('artist')
             if self.info.get('title'):
-                if self.info.get('artist'):
-                    cb_data['meta'] = self.info.get('artist') + ' - ' + self.info.get('title')
-                else:
-                    cb_data['meta'] = self.info.get('title')
+                if cb_data['meta']:
+                    cb_data['meta'] += ' - '
+                cb_data['meta'] += self.info.get('title')
+            if self.info.get('name'):
+                if cb_data['meta']:
+                    cb_data['meta'] += ' - '
+                cb_data['meta'] += self.info.get('name')
+            if self.info.get('album'):
+                cb_data['meta'] += ' - ' + self.info.get('album')
+                if self.info.get('date'):
+                    cb_data['meta'] += ' (' + self.info.get('date') + ')'
 
         for key in {'state', 'repeat', 'random', 'single', 'consume'}:
             value = status.get(key)
