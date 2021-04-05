@@ -25,10 +25,9 @@ class AmpNetwork(object):
         self.ip = ''
 
     def update_ip(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.settimeout(1)
-
         try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(1)
             s.connect(('8.8.8.8', 1))
             ip = s.getsockname()[0]
         except Exception:

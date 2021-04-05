@@ -1,6 +1,6 @@
 [Unit]
 Description=MPD/BT management from ampcontrol
-After=mpd.service bluealsa-aplay.service
+After=mpd.service bluetooth.service
 
 [Service]
 Type=simple
